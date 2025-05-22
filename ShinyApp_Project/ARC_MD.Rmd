@@ -1,0 +1,152 @@
+---
+title: "ARC Staff and Tutor Utilization Statistics"
+output:
+  word_document: default
+  pdf_document: default
+params:
+  semester: fall_2014
+---
+The chart below displays the total ARC utilization of the top 10 courses in percentage versus all other courses for which support was offered by the ARC
+```{r, echo=FALSE}
+library(rmarkdown)
+library(ggplot2)
+library(gsheet)
+
+file_path <- "https://docs.google.com/spreadsheets/d/1VchC1E68erXgaOUw4pIi4H3JSIfHFzqjpF3XCv5Xk84/edit?usp=sharing"
+subset_data <- function(semester,column1, column2){
+  #cleaned_df <- read.csv(paste0(file_path,"Cleaned_Data_Updated.csv"))
+  cleaned_df <- gsheet2tbl(file_path)
+
+  drop <- c("Date.1")
+
+  cleaned_df<- cleaned_df[!(names(cleaned_df)%in%drop)]
+  cleaned_df_sub <- cleaned_df[cleaned_df$Semester==semester,]
+  cleaned_df_sub = cleaned_df_sub[c(column1, column2)]
+  return (cleaned_df_sub)
+}
+
+
+```
+
+
+```{r, fig.width=15,fig.height=15, echo=FALSE, warning= FALSE}
+cleaned_df_sub <- subset_data(params$semester,"Course.Number", "Session.Length")
+cleaned_df_agg = aggregate(cleaned_df_sub$Session.Length, by=list(Category=cleaned_df_sub$Course.Number), FUN=sum)
+cleaned_df_agg = cleaned_df_agg[order(cleaned_df_agg$x, decreasing=TRUE),]
+
+sum_hours = sum(cleaned_df_agg$x) - sum(cleaned_df_agg$x[0:11])
+cleaned_df_agg = cleaned_df_agg[0:11,]
+de<-data.frame("Others",sum_hours)
+names(cleaned_df_agg) <- c("Course_Name","Total-Session-Length")
+names(de)<-c("Course_Name","Total-Session-Length")
+cleaned_df_agg = rbind(cleaned_df_agg, de)
+cleaned_df_agg["Utilization"] = round(cleaned_df_agg["Total-Session-Length"]*100/sum(cleaned_df_agg['Total-Session-Length']),2)
+library(ggplot2)
+ggplot(cleaned_df_agg,aes(Course_Name,Utilization, fill=factor(Course_Name)))+geom_bar(stat="identity")+coord_flip()+
+  geom_text(aes(label = paste(Utilization, "%")), position = position_dodge(2.0),size=6, family = "Arial" ) +  theme(axis.text.x = element_text(color = "grey20", size = 20, angle = 90, hjust = .5, vjust = .5, face = "plain"),
+        axis.text.y = element_text(color = "grey20", size = 20, angle = 0, hjust = 1, vjust = 0, face = "plain"),  
+        axis.title.x = element_text(color = "grey20", size = 20, angle = 0, hjust = .5, vjust = 0, face = "plain"),
+        axis.title.y = element_text(color = "grey20", size = 20, angle = 90, hjust = .5, vjust = .5, face = "plain")) + xlab("Course Name") + ylab("Utilization in %")
+
+```
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r, fig.width=35,fig.height=30, echo=FALSE, warning= FALSE}
+
+cleaned_df_sub <- subset_data(params$semester, "Name", "Session.Length")
+cleaned_df_agg = aggregate(cleaned_df_sub$Session.Length, by=list(Category=cleaned_df_sub$Name), FUN=sum)
+cleaned_df_agg = cleaned_df_agg[order(cleaned_df_agg$x, decreasing=TRUE),]
+
+sum_hours = sum(cleaned_df_agg$x) - sum(cleaned_df_agg$x[0:11])
+cleaned_df_agg = cleaned_df_agg[0:11,]
+de<-data.frame("Others",sum_hours)
+names(cleaned_df_agg) <- c("Name","Session-Length-Minutes")
+names(de)<-c("Name","Session-Length-Minutes")
+cleaned_df_agg = rbind(cleaned_df_agg, de)
+cleaned_df_agg["Hours"] = round(cleaned_df_agg["Session-Length-Minutes"]/60,0)
+
+
+library(ggplot2)
+ggplot(cleaned_df_agg,aes(Name,Hours,fill=factor(Name)))+geom_bar(stat="identity")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(text = element_text(size=40))+ xlab("Tutor Name") + ylab("Hours of Support") + geom_text(aes(label = Hours),size=10, family = "Arial" )
+
+
+```
+
+
+
+```{r, fig.width=35,fig.height=30, echo=FALSE, warning= FALSE}
+cleaned_df <- gsheet2tbl(file_path)
+drop <- c("Date.1")
+cleaned_df<- cleaned_df[!(names(cleaned_df)%in%drop)]
+cleaned_df_agg = aggregate(cleaned_df$Session.Length, by=list(Category=cleaned_df$Semester), FUN=sum)
+cleaned_df_agg = cleaned_df_agg[order(cleaned_df_agg$x, decreasing=TRUE),]
+
+names(cleaned_df_agg) <- c("Semester","Session-Length-Minutes")
+cleaned_df_agg["Hours"] = round(cleaned_df_agg["Session-Length-Minutes"]/60,0)
+
+
+library(ggplot2)
+ggplot(cleaned_df_agg,aes(Semester,Hours,fill=factor(Semester)))+geom_bar(stat="identity")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(text = element_text(size=40))+ xlab("Semester") + ylab("Hours of Support") + geom_text(aes(label = Hours),size=10, family = "Arial" )
+
+```
+
+
+
+
+
+
+
+
+
+Time Series Plot of ARC tutoring sessions in hours for the current semester
+```{r, fig.width=15,fig.height=15, echo=FALSE, warning= FALSE}
+
+cleaned_df <- gsheet2tbl(file_path)
+drop <- c("Date.1")
+cleaned_df<- cleaned_df[!(names(cleaned_df)%in%drop)]
+cleaned_df_sub <- cleaned_df[cleaned_df$Semester==params$semester,]
+cleaned_df_sub = cleaned_df_sub[c("week_number", "Session.Length")]
+
+cleaned_df_agg = aggregate(cleaned_df_sub$Session.Length, by=list(Category=cleaned_df_sub$week_number), FUN=sum)
+cleaned_df_agg = cleaned_df_agg[order(cleaned_df_agg$x, decreasing=TRUE),]
+cleaned_df_agg = cleaned_df_agg[0:17,]
+names(cleaned_df_agg) <- c("Week","Total-Session-Length")
+cleaned_df_agg["Hours"] = round((cleaned_df_agg["Total-Session-Length"]/60),2)
+p <- ggplot(cleaned_df_agg, aes(x=Week, y=Hours)) +
+  geom_line() + 
+  xlab("Week")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(text = element_text(size=20))
+  
+p
+```
+
+
+```{r, fig.width=30,fig.height=30, echo=FALSE, warning= FALSE}
+cleaned_df <- gsheet2tbl(file_path)
+drop <- c("Date.1")
+cleaned_df<- cleaned_df[!(names(cleaned_df)%in%drop)]
+cleaned_df_sub <- cleaned_df[cleaned_df$Semester==params$semester,]
+cleaned_df_sub = cleaned_df_sub[c("Department", "Session.Length")]
+
+cleaned_df_agg = aggregate(cleaned_df_sub$Session.Length, by=list(Category=cleaned_df_sub$Department), FUN=sum)
+cleaned_df_agg = cleaned_df_agg[order(cleaned_df_agg$x, decreasing=TRUE),]
+
+sum_hours = sum(cleaned_df_agg$x) - sum(cleaned_df_agg$x[0:11])
+cleaned_df_agg = cleaned_df_agg[0:11,]
+de<-data.frame("Others",sum_hours)
+names(cleaned_df_agg) <- c("Department","Session-Length-Minutes")
+names(de)<-c("Department","Session-Length-Minutes")
+cleaned_df_agg = rbind(cleaned_df_agg, de)
+cleaned_df_agg["Hours"] = round(cleaned_df_agg["Session-Length-Minutes"]/60,0)
+
+ggplot(cleaned_df_agg,aes(Department,Hours,fill=factor(Department)))+geom_bar(stat="identity")+ theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(text = element_text(size=40))+ xlab("Department") + ylab("Hours of Support") + geom_text(aes(label = Hours),size=10, family = "Arial" )
+
+```
+
+
+
+
